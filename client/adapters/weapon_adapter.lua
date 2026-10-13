@@ -1,3 +1,8 @@
+-----------------------------------------------------------------------------------------------------------------------------------------
+-- DP_GAMEPLAY | WEAPON ADAPTER (CLIENT)
+-- Responsabilidade: Interação nativa com GTA V / FiveM para criação, verificação e exclusão de entidades de armas/props
+-----------------------------------------------------------------------------------------------------------------------------------------
+
 local WeaponAdapter = {}
 local UNARMED_HASH = -1569615261
 local oxItemsCache = nil
@@ -44,7 +49,7 @@ function WeaponAdapter.spawnSlingEntity(item)
 
     local isWeapon = (item.category == 'weapon' or item.category == 'rifle' or item.category == 'shotgun' or item.category == 'smg' or item.category == 'sniper' or item.category == 'pistol' or upperName:find('^WEAPON_') or upperProp:find('^WEAPON_'))
 
-    -- 1. Se for arma, instancia via CreateWeaponObject com malha 3D e magazine garantidos
+    -- 1. Instanciação de arma via CreateWeaponObject com malha 3D e magazine pré-carregados
     if isWeapon then
         local wepName = upperName:find('^WEAPON_') and upperName or (upperProp:find('^WEAPON_') and upperProp or ('WEAPON_' .. upperName))
         local wepHash = (wepName ~= '' and GetHashKey(wepName)) or item.hash or 0
@@ -57,39 +62,32 @@ function WeaponAdapter.spawnSlingEntity(item)
                 if IsModelInCdimage(magHash) then WeaponAdapter.loadModel(magHash, 500) end
             end
 
-            if not WeaponAdapter.loadWeaponAsset(wepHash, 2000) then
-                print(string.format('^1[Sling DEBUG] Timeout ao carregar asset da arma %s (%s)^7', wepName, tostring(wepHash)))
-            end
+            WeaponAdapter.loadWeaponAsset(wepHash, 2000)
             if HasWeaponAssetLoaded(wepHash) then
                 local obj = CreateWeaponObject(wepHash, 0, 0.0, 0.0, 0.0, true, 1.0, 0)
                 if obj and DoesEntityExist(obj) then
                     SetEntityVisible(obj, true, 0)
                     SetEntityAlpha(obj, 255, false)
                     ResetEntityAlpha(obj)
-                    print(string.format('^2[Sling DEBUG] CreateWeaponObject SUCESSO (%s / %s) -> handle=%s^7', wepName, tostring(wepHash), tostring(obj)))
                     return obj, true
                 end
             end
         end
     end
 
-    -- 2. Se for objeto/prop/mochila/item não-arma, instancia via CreateObject
+    -- 2. Instanciação de prop / objeto não-arma via CreateObject
     local propName = (rawProp ~= '' and not rawProp:find('^WEAPON_')) and rawProp or rawName
     local modelHash = GetHashKey(propName)
     if modelHash and modelHash ~= 0 then
-        if not WeaponAdapter.loadModel(modelHash, 2000) then
-            print(string.format('^1[Sling DEBUG] Timeout ao carregar modelo prop %s (%s)^7', propName, tostring(modelHash)))
-        end
+        WeaponAdapter.loadModel(modelHash, 2000)
         if HasModelLoaded(modelHash) then
             local obj = CreateObject(modelHash, 0.0, 0.0, 0.0, false, false, false)
             if obj and DoesEntityExist(obj) then
-                print(string.format('^2[Sling DEBUG] CreateObject SUCESSO (%s / %s) -> handle=%s^7', propName, tostring(modelHash), tostring(obj)))
                 return obj, false
             end
         end
     end
 
-    print(string.format('^1[Sling DEBUG] spawnSlingEntity FALHOU para item: %s | prop=%s^7', rawName, rawProp))
     return nil, false
 end
 
@@ -97,7 +95,8 @@ function WeaponAdapter.deleteEntity(entity)
     if entity and DoesEntityExist(entity) then
         DetachEntity(entity, true, true)
         SetEntityAsMissionEntity(entity, true, true)
-        DeleteObject(entity); DeleteEntity(entity)
+        DeleteObject(entity)
+        DeleteEntity(entity)
         if DoesEntityExist(entity) then
             SetEntityCoords(entity, 0.0, 0.0, -5000.0, false, false, false, false)
             SetEntityAlpha(entity, 0, false)
@@ -113,15 +112,13 @@ function WeaponAdapter.isWeaponInHand(ped, wep)
     local _, current = GetCurrentPedWeapon(ped, true)
     current = WeaponAdapter.normalizeHash(current)
 
-    local isHolding = false
     if selected ~= 0 and selected ~= UNARMED_HASH and (selected == wepHash or selected == nameHash) then
-        isHolding = true
-    elseif current ~= 0 and current ~= UNARMED_HASH and (current == wepHash or current == nameHash) then
-        isHolding = true
+        return true
     end
-    print(string.format('^3[Sling DEBUG] isWeaponInHand(%s) | wepHash=%s, nameHash=%s | selected=%s, current=%s -> isHolding=%s^7',
-        tostring(wep.name), tostring(wepHash), tostring(nameHash), tostring(selected), tostring(current), tostring(isHolding)))
-    return isHolding
+    if current ~= 0 and current ~= UNARMED_HASH and (current == wepHash or current == nameHash) then
+        return true
+    end
+    return false
 end
 
 local function getOxItems()
