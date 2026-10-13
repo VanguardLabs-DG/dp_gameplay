@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Admin · Slings & Coldres</title>
+  <link rel="stylesheet" href="https://cfx-nui-vanguard_lib/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="https://cfx-nui-vanguard_lib/vendor/css/vanguard-tokens.css">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="app-layout">
+    <header class="top-toolbar">
+      <div class="title-group">
+        <div class="icon-badge"><i class="fa-solid fa-shield-halved"></i></div>
+        <div>
+          <h1>Slings & Itens Corporais</h1>
+          <p class="subtitle">Posicionamento 3D de armas e itens visíveis no corpo</p>
+        </div>
+      </div>
+      <div class="toolbar-actions">
+        <div class="global-toggle-wrapper">
+          <span class="toggle-label">Sistema Global:</span>
+          <label class="switch">
+            <input type="checkbox" id="globalToggle" checked>
+            <span class="slider round"></span>
+          </label>
+        </div>
+        <button class="btn btn-secondary" id="btnRefresh"><i class="fa-solid fa-arrows-rotate"></i> Atualizar</button>
+        <button class="btn btn-primary" id="btnNewItem"><i class="fa-solid fa-plus"></i> Novo Item</button>
+      </div>
+    </header>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <i class="fa-solid fa-layer-group stat-icon"></i>
+        <div><span class="stat-value" id="statTotal">0</span><span class="stat-label">Total Cadastrado</span></div>
+      </div>
+      <div class="stat-card">
+        <i class="fa-solid fa-gun stat-icon text-accent"></i>
+        <div><span class="stat-value" id="statWeapons">0</span><span class="stat-label">Armas de Fogo</span></div>
+      </div>
+      <div class="stat-card">
+        <i class="fa-solid fa-box-open stat-icon text-warning"></i>
+        <div><span class="stat-value" id="statItems">0</span><span class="stat-label">Itens / Utilitários</span></div>
+      </div>
+      <div class="stat-card">
+        <i class="fa-solid fa-circle-check stat-icon text-success"></i>
+        <div><span class="stat-value" id="statActive">0</span><span class="stat-label">Itens Ativos</span></div>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <div class="search-box">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="text" id="searchInput" placeholder="Buscar por nome, spawn ou prop...">
+      </div>
+      <div class="category-filters" id="categoryFilters">
+        <button class="pill active" data-cat="all">Todos</button>
+        <button class="pill" data-cat="rifle">Fuzis</button>
+        <button class="pill" data-cat="shotgun">Espingardas</button>
+        <button class="pill" data-cat="smg">Submetralhadoras</button>
+        <button class="pill" data-cat="pistol">Pistolas</button>
+        <button class="pill" data-cat="melee">Brancas</button>
+        <button class="pill" data-cat="illicit">Drogas/Ilícitos</button>
+        <button class="pill" data-cat="utility">Utilitários</button>
+      </div>
+    </div>
+
+    <main class="content-body">
+      <div class="table-container">
+        <table class="sling-table">
+          <thead>
+            <tr>
+              <th>Item / Identificador</th>
+              <th>Prop 3D</th>
+              <th>Categoria</th>
+              <th>Osso de Ancoragem</th>
+              <th>Coordenadas (X, Y, Z)</th>
+              <th>Rotações (P, R, Y)</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="catalogTableBody">
+            <!-- Injetado dinamicamente via app.js -->
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal de Criação / Edição de Sling -->
+  <div class="modal-overlay" id="itemModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modalTitle"><i class="fa-solid fa-sliders"></i> Configurar Sling de Item</h3>
+        <button class="btn-close" id="btnCloseModal"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="slingForm" class="modal-body">
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="fItemName">Nome de Spawn (ox_inventory)</label>
+            <input type="text" id="fItemName" required placeholder="ex: weapon_ia2, weed_brick">
+          </div>
+          <div class="form-group flex-1">
+            <label for="fLabel">Nome Amigável (Label)</label>
+            <input type="text" id="fLabel" required placeholder="ex: Fuzil IA2 (PMESP)">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="fPropModel">Modelo do Prop / Arma 3D</label>
+            <input type="text" id="fPropModel" required placeholder="ex: w_ar_carbinerifle">
+          </div>
+          <div class="form-group flex-1">
+            <label for="fCategory">Categoria</label>
+            <select id="fCategory">
+              <option value="rifle">Fuzil / Rifle</option>
+              <option value="shotgun">Espingarda / Shotgun</option>
+              <option value="smg">Submetralhadora / SMG</option>
+              <option value="pistol">Pistola / Coldre Lateral</option>
+              <option value="sniper">Sniper / Fuzil Pesado</option>
+              <option value="melee">Arma Branca</option>
+              <option value="illicit">Drogas / Maleta Ilícita</option>
+              <option value="utility">Utilitário / Equipamento</option>
+            </select>
+          </div>
+          <div class="form-group flex-1">
+            <label for="fBone">Osso Ancoragem</label>
+            <select id="fBone">
+              <option value="24818">24818 (Peito / Tronco Frontal)</option>
+              <option value="24816">24816 (Costas / Coluna Traseira)</option>
+              <option value="11816">11816 (Cintura / Quadril Direito)</option>
+              <option value="51826">51826 (Coxa Direita)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="coords-box">
+          <div class="coords-box-header">
+            <h4><i class="fa-solid fa-crosshairs"></i> Posicionamento Espacial</h4>
+            <button type="button" class="btn btn-warning btn-sm" id="btnCalibrateInGame">
+              <i class="fa-solid fa-street-view"></i> Ajustar no Ped (In-Game 3D)
+            </button>
+          </div>
+          <div class="coords-grid">
+            <div class="form-group"><label>Offset X</label><input type="number" step="0.005" id="fX" value="0.000"></div>
+            <div class="form-group"><label>Offset Y</label><input type="number" step="0.005" id="fY" value="0.000"></div>
+            <div class="form-group"><label>Offset Z</label><input type="number" step="0.005" id="fZ" value="0.000"></div>
+            <div class="form-group"><label>Pitch (Rot X)</label><input type="number" step="0.5" id="fRotX" value="0.0"></div>
+            <div class="form-group"><label>Roll (Rot Y)</label><input type="number" step="0.5" id="fRotY" value="0.0"></div>
+            <div class="form-group"><label>Yaw (Rot Z)</label><input type="number" step="0.5" id="fRotZ" value="0.0"></div>
+          </div>
+        </div>
+
+        <div class="form-group-checkbox">
+          <label class="switch">
+            <input type="checkbox" id="fEnabled" checked>
+            <span class="slider round"></span>
+          </label>
+          <span>Habilitar exibição deste sling para os jogadores</span>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="btnCancelModal">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btnSaveModal"><i class="fa-solid fa-floppy-disk"></i> Salvar Sling</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="toast-viewport"></div>
+
+  <script src="https://cfx-nui-vanguard_lib/js/vanguard-plugin-bridge.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
