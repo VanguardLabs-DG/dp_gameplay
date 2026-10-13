@@ -31,7 +31,6 @@ function SlingDatabaseService.broadcast()
     end
     table.sort(catalogList, function(a, b) return tostring(a.label) < tostring(b.label) end)
     GlobalState.slingCatalog = cachedCatalog
-    TriggerClientEvent('dp_gameplay:client:syncSlingCatalog', -1, cachedCatalog)
     return catalogList
 end
 
@@ -43,20 +42,19 @@ function SlingDatabaseService.reload()
         local rawKey = tostring(r.item_name or '')
         local lowKey = string.lower(rawKey)
         if lowKey ~= '' then
+            local upperKey = string.upper(rawKey)
+            local canonical = upperKey:find('^WEAPON_') and upperKey or ('WEAPON_' .. upperKey)
             local entry = {
-                id = r.id, item_name = rawKey, label = r.label or rawKey, prop_model = r.prop_model or rawKey,
+                id = r.id, item_name = canonical, label = r.label or canonical, prop_model = r.prop_model or canonical,
                 category = r.category or 'weapon', bone = tonumber(r.bone) or 24818,
                 x = tonumber(r.x) or 0.0, y = tonumber(r.y) or 0.0, z = tonumber(r.z) or 0.0,
                 x_rot = tonumber(r.x_rot) or 0.0, y_rot = tonumber(r.y_rot) or 0.0, z_rot = tonumber(r.z_rot) or 0.0,
-                is_enabled = (r.is_enabled == 1 or r.is_enabled == true) and true or false
+                is_enabled = (r.is_enabled == 1 or r.is_enabled == true)
             }
+            cachedCatalog[canonical] = entry
             cachedCatalog[lowKey] = entry
-            cachedCatalog[string.upper(lowKey)] = entry
             local stripped = lowKey:gsub('^weapon_', '')
-            if stripped ~= '' then
-                cachedCatalog[stripped] = entry
-                cachedCatalog[string.upper(stripped)] = entry
-            end
+            if stripped ~= '' and stripped ~= lowKey then cachedCatalog[stripped] = entry end
         end
     end
     return SlingDatabaseService.broadcast()
@@ -163,7 +161,6 @@ function SlingDatabaseService.init()
     lib.callback.register('dp_gameplay:server:toggleGlobalSlings', function(source, newState)
         if not hasAdminPerms(source) then return { ok = false, message = 'Sem permissão.' } end
         GlobalState.slingsEnabled = newState and true or false
-        TriggerClientEvent('dp_gameplay:client:syncGlobalSlings', -1, GlobalState.slingsEnabled)
         return { ok = true, enabled = GlobalState.slingsEnabled }
     end)
 

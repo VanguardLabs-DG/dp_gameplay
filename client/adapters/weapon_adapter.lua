@@ -24,11 +24,6 @@ function WeaponAdapter.loadWeaponAsset(wepHash, timeoutMs)
     return HasWeaponAssetLoaded(wepHash)
 end
 
-function WeaponAdapter.createWeaponObject(wepHash)
-    if not wepHash or wepHash == 0 then return 0 end
-    return CreateWeaponObject(wepHash, 0, 0.0, 0.0, 0.0, true, 1.0, 0)
-end
-
 function WeaponAdapter.loadModel(modelHash, timeoutMs)
     if not modelHash or modelHash == 0 then return false end
     if HasModelLoaded(modelHash) then return true end
@@ -49,7 +44,7 @@ function WeaponAdapter.spawnSlingEntity(item)
 
     local isWeapon = (item.category == 'weapon' or item.category == 'rifle' or item.category == 'shotgun' or item.category == 'smg' or item.category == 'sniper' or item.category == 'pistol' or upperName:find('^WEAPON_') or upperProp:find('^WEAPON_'))
 
-    -- 1. Instanciação de arma via CreateWeaponObject com malha 3D e magazine pré-carregados
+    -- 1. Instanciação de arma via CreateWeaponObject (isNetwork = false para prop puramente visual local)
     if isWeapon then
         local wepName = upperName:find('^WEAPON_') and upperName or (upperProp:find('^WEAPON_') and upperProp or ('WEAPON_' .. upperName))
         local wepHash = (wepName ~= '' and GetHashKey(wepName)) or item.hash or 0
@@ -75,16 +70,14 @@ function WeaponAdapter.spawnSlingEntity(item)
         end
     end
 
-    -- 2. Instanciação de prop / objeto não-arma via CreateObject
+    -- 2. Instanciação de prop / objeto não-arma via CreateObject (isNetwork = false)
     local propName = (rawProp ~= '' and not rawProp:find('^WEAPON_')) and rawProp or rawName
     local modelHash = GetHashKey(propName)
     if modelHash and modelHash ~= 0 then
         WeaponAdapter.loadModel(modelHash, 2000)
         if HasModelLoaded(modelHash) then
             local obj = CreateObject(modelHash, 0.0, 0.0, 0.0, false, false, false)
-            if obj and DoesEntityExist(obj) then
-                return obj, false
-            end
+            if obj and DoesEntityExist(obj) then return obj, false end
         end
     end
 
@@ -100,6 +93,7 @@ function WeaponAdapter.deleteEntity(entity)
         if DoesEntityExist(entity) then
             SetEntityCoords(entity, 0.0, 0.0, -5000.0, false, false, false, false)
             SetEntityAlpha(entity, 0, false)
+            SetEntityVisible(entity, false, 0)
         end
     end
 end
@@ -108,17 +102,55 @@ function WeaponAdapter.isWeaponInHand(ped, wep)
     if not DoesEntityExist(ped) or not wep then return false end
     local wepHash = wep.hash and WeaponAdapter.normalizeHash(wep.hash) or 0
     local nameHash = wep.name and WeaponAdapter.normalizeHash(GetHashKey(wep.name)) or 0
+    local rawHash = wep.rawName and WeaponAdapter.normalizeHash(GetHashKey(wep.rawName)) or 0
     local selected = WeaponAdapter.normalizeHash(GetSelectedPedWeapon(ped))
     local _, current = GetCurrentPedWeapon(ped, true)
     current = WeaponAdapter.normalizeHash(current)
 
-    if selected ~= 0 and selected ~= UNARMED_HASH and (selected == wepHash or selected == nameHash) then
+    if selected ~= 0 and selected ~= UNARMED_HASH and (selected == wepHash or selected == nameHash or selected == rawHash) then
         return true
     end
-    if current ~= 0 and current ~= UNARMED_HASH and (current == wepHash or current == nameHash) then
+    if current ~= 0 and current ~= UNARMED_HASH and (current == wepHash or current == nameHash or current == rawHash) then
         return true
     end
+
+    local myPed = cache.ped or PlayerPedId()
+    if ped == myPed then
+        local myWep = LocalPlayer.state.currentWeapon
+        if myWep and myWep ~= 0 and myWep ~= UNARMED_HASH then
+            myWep = WeaponAdapter.normalizeHash(myWep)
+            if myWep == wepHash or myWep == nameHash or myWep == rawHash then
+                return true
+            end
+        end
+    end
+
     return false
+end
+
+function WeaponAdapter.resolveComponentsAndTint(wepHash, item, serverId)
+    local raw = WeaponAdapter.getComponentHashes(wepHash, item and item.components)
+    local tint = item and tonumber(item.tint) or 0
+    local pState = Player(serverId).state
+    if pState then
+        local vipAtt, vipT = pState.vipWeaponAttachs, pState.vipWeaponTints
+        if vipAtt and vipAtt[wepHash] then
+            for c, eq in pairs(vipAtt[wepHash]) do
+                local n = tonumber(c)
+                if n and eq then raw[#raw + 1] = n end
+            end
+        end
+        if vipT and vipT[wepHash] ~= nil then tint = tonumber(vipT[wepHash]) or tint end
+    end
+    local uMap, comps = {}, {}
+    for _, c in ipairs(raw) do
+        local n = tonumber(c)
+        if n and n ~= 0 and not uMap[n] and DoesWeaponTakeWeaponComponent(wepHash, n) then
+            uMap[n] = true; comps[#comps + 1] = n
+        end
+    end
+    table.sort(comps)
+    return comps, tint
 end
 
 local function getOxItems()

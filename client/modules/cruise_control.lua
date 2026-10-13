@@ -50,6 +50,11 @@ local function startCruiseWorker(veh)
     isWorkerRunning = true
 
     CreateThread(function()
+        local isAir = VehicleAdapter.isAircraft(veh)
+        local isHeli = isAir and VehicleAdapter.isHelicopter(veh) or false
+        local nextWaypointCheck = 0
+        local cachedWpCoords = nil
+
         while isCruiseActive or isAutopilotActive do
             local ped = PedAdapter.getPed()
             if not DoesEntityExist(veh) or GetPedInVehicleSeat(veh, -1) ~= ped then
@@ -57,7 +62,6 @@ local function startCruiseWorker(veh)
                 break
             end
 
-            local isAir = VehicleAdapter.isAircraft(veh)
             if checkCollisionOrHealthDrop(veh, isAir) then
                 stopCruise('Desativado por colisão ou impacto.')
                 break
@@ -76,24 +80,28 @@ local function startCruiseWorker(veh)
             end
 
             if isAutopilotActive then
-                local wpCoords = VehicleAdapter.getWaypointCoords()
-                if not wpCoords then stopCruise('Marcação removida.'); break end
+                local now = GetGameTimer()
+                if now >= nextWaypointCheck then
+                    nextWaypointCheck = now + 250
+                    cachedWpCoords = VehicleAdapter.getWaypointCoords()
+                end
+
+                if not cachedWpCoords then stopCruise('Marcação removida.'); break end
 
                 local curCoords = GetEntityCoords(veh)
-                local dist = #(vector2(curCoords.x, curCoords.y) - vector2(wpCoords.x, wpCoords.y))
+                local dist = #(vector2(curCoords.x, curCoords.y) - vector2(cachedWpCoords.x, cachedWpCoords.y))
                 if dist <= (ConfigCruise.planeWaypointApproachDist or 120.0) then
                     stopCruise('Destino alcançado. Assuma o controle.')
                     break
                 end
 
-                local now = GetGameTimer()
                 if now >= nextRouteUpdate then
                     nextRouteUpdate = now + (ConfigCruise.updateIntervalMs or 1500)
                     local cruiseMs = math.max(currentSpeedKmh, ConfigCruise.aircraftMinSpeedKmh or 80.0) / 3.6
-                    if VehicleAdapter.isHelicopter(veh) then
-                        VehicleAdapter.applyAutopilotHeli(veh, ped, wpCoords, cruiseMs, waypointZ or curCoords.z)
+                    if isHeli then
+                        VehicleAdapter.applyAutopilotHeli(veh, ped, cachedWpCoords, cruiseMs, waypointZ or curCoords.z)
                     else
-                        VehicleAdapter.applyAutopilotPlane(veh, ped, wpCoords, cruiseMs, waypointZ or curCoords.z)
+                        VehicleAdapter.applyAutopilotPlane(veh, ped, cachedWpCoords, cruiseMs, waypointZ or curCoords.z)
                     end
                 end
             else

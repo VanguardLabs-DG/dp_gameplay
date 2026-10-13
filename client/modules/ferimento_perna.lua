@@ -88,6 +88,14 @@ function FerimentoPernaModule.init()
         resetInjury('Seu ferimento na perna foi completamente curado.')
     end)
 
+    RegisterNetEvent('qbx_medical:client:playerRevived', function()
+        resetInjury()
+    end)
+
+    RegisterNetEvent('hospital:client:Revive', function()
+        resetInjury()
+    end)
+
     RegisterNetEvent('ferimento_perna:ferir', function()
         if not isInjured then
             isInjured = true

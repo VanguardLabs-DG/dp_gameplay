@@ -52,6 +52,12 @@ function KeybindsCore.init()
         CruiseModule.toggleAutopilot()
     end, false)
     RegisterKeyMapping('cruise_autopilot', 'Piloto Automático (Aeronaves)', 'keyboard', 'DELETE')
+
+    -- 5. Ordem de Rendição Policial (Mirando no suspeito)
+    RegisterCommand('render_ordem', function()
+        SurrenderModule.attemptSurrenderOrder()
+    end, false)
+    RegisterKeyMapping('render_ordem', 'Ordem de Rendição (Mirando)', 'keyboard', 'F5')
 end
 
 _G.KeybindsCore = KeybindsCore

@@ -62,6 +62,7 @@ function InventoryAdapter.registerHotbarObserver(callback)
         local toSlot = type(payload.toSlot) == 'table' and payload.toSlot.slot or tonumber(payload.toSlot)
 
         if InventoryAdapter.isHotbarSlot(fromSlot) or InventoryAdapter.isHotbarSlot(toSlot) then
+            notifyTarget(payload.source)
             notifyTarget(payload.fromInventory)
             notifyTarget(payload.toInventory)
         end

@@ -5,7 +5,8 @@
 
 local ArmaFrenteService = {}
 local playerSignatures = {} -- [src] = "sigString"
-local pendingUpdates = {}   -- [src] = bool (debounce)
+local pendingTimers = {}     -- [src] = bool
+local needsFollowup = {}     -- [src] = bool
 
 local function isSlingCompatible(rawName, oxItem)
     if GlobalState.slingsEnabled == false then return false, nil end
@@ -114,11 +115,19 @@ function ArmaFrenteService.updatePlayerSling(src)
 end
 
 function ArmaFrenteService.requestDebouncedUpdate(src)
-    if not src or src <= 0 or pendingUpdates[src] then return end
-    pendingUpdates[src] = true
-    SetTimeout(50, function()
-        pendingUpdates[src] = nil
+    if not src or src <= 0 or not GetPlayerPing(src) or GetPlayerPing(src) <= 0 then return end
+    if pendingTimers[src] then
+        needsFollowup[src] = true
+        return
+    end
+    pendingTimers[src] = true
+    SetTimeout(100, function()
+        pendingTimers[src] = nil
         ArmaFrenteService.updatePlayerSling(src)
+        if needsFollowup[src] then
+            needsFollowup[src] = nil
+            ArmaFrenteService.requestDebouncedUpdate(src)
+        end
     end)
 end
 
@@ -142,7 +151,8 @@ function ArmaFrenteService.init()
 
     AddEventHandler('playerDropped', function()
         playerSignatures[source] = nil
-        pendingUpdates[source] = nil
+        pendingTimers[source] = nil
+        needsFollowup[source] = nil
     end)
 
     AddStateBagChangeHandler('slingCatalog', 'global', function()

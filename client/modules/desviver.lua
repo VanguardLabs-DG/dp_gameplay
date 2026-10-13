@@ -22,18 +22,17 @@ local function startRemoteAimsThread()
     if isRemoteThreadRunning then return end
     isRemoteThreadRunning = true
     CreateThread(function()
+        lib.requestAnimDict(ConfigDesviver.Dict, 1000)
         while next(ActiveSuicideAims) ~= nil do
             for targetSource, data in pairs(ActiveSuicideAims) do
                 local tPlayer = GetPlayerFromServerId(targetSource)
                 local tPed = (tPlayer and tPlayer ~= -1) and GetPlayerPed(tPlayer) or 0
                 if DoesEntityExist(tPed) and GetEntityHealth(tPed) > 100 and not IsEntityDead(tPed) then
-                    if lib.requestAnimDict(ConfigDesviver.Dict, 500) then
-                        if not IsEntityPlayingAnim(tPed, ConfigDesviver.Dict, ConfigDesviver.Anim, 3) then
-                            TaskPlayAnim(tPed, ConfigDesviver.Dict, ConfigDesviver.Anim, 8.0, -8.0, -1, 50, data.phase, false, false, false)
-                        end
-                        SetEntityAnimSpeed(tPed, ConfigDesviver.Dict, ConfigDesviver.Anim, 0.0)
-                        SetEntityAnimCurrentTime(tPed, ConfigDesviver.Dict, ConfigDesviver.Anim, data.phase)
+                    if not IsEntityPlayingAnim(tPed, ConfigDesviver.Dict, ConfigDesviver.Anim, 3) then
+                        TaskPlayAnim(tPed, ConfigDesviver.Dict, ConfigDesviver.Anim, 8.0, -8.0, -1, 50, data.phase, false, false, false)
                     end
+                    SetEntityAnimSpeed(tPed, ConfigDesviver.Dict, ConfigDesviver.Anim, 0.0)
+                    SetEntityAnimCurrentTime(tPed, ConfigDesviver.Dict, ConfigDesviver.Anim, data.phase)
                 else
                     ActiveSuicideAims[targetSource] = nil
                 end

@@ -131,7 +131,6 @@ function SlingEditorService.saveConfig(src, newConfig)
     local encoded = json.encode(currentConfig, { indent = true })
     SaveResourceFile(GetCurrentResourceName(), CONFIG_FILE, encoded, -1)
 
-    TriggerClientEvent('dp_gameplay:client:syncSlingConfig', -1, currentConfig)
     TriggerClientEvent('ox_lib:notify', src, {
         title = 'Coldre Atualizado',
         description = 'Posicionamento do coldre salvo e replicado para todos!',

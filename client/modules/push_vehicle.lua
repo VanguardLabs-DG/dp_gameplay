@@ -40,7 +40,10 @@ function PushVehicleModule.startPush()
 
     CreateThread(function()
         while isPushing and DoesEntityExist(pushedVehicle) do
-            if not isPushing then break end
+            local p = PedAdapter.getPed()
+            if PedAdapter.isDeadOrDown(p) or IsPedRagdoll(p) or IsPedInAnyVehicle(p, false) then
+                break
+            end
 
             SetVehicleHandbrake(pushedVehicle, false)
 
